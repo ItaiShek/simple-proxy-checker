@@ -4,10 +4,13 @@
 import socket
 from os.path import exists
 from time import time
+from threading import Thread, Lock
 
+print_lock = Lock()
+counter = 1
 
 # return True if the host responds to ping, and False if not.
-def checkProxy(ip, port, wait):
+def checkProxy(ip, port, wait, outfile):
     # create stream socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -17,16 +20,33 @@ def checkProxy(ip, port, wait):
     # close socket
     sock.close()
 
+    global counter
+    print_lock.acquire()
+    counter += 1
+    print(f'Checking {ip}:{str(port)}')
+
     # The host is up
     if connect == 0:
+        print('host is up')
+        print_lock.release()
+
+        if outfile: # write to file
+            outfile.write(ip + ':' + str(port) + '\n')
+            outfile.flush()
+
         return True
+
     # The host is down, or passed the time limit
+    print('host is down')
+    print_lock.release()
+
     return False
 
 
 # check all the proxies
 def checkProxyList(proxyList, output, wait):
-    output_mark = False
+    output_file = ''
+
     # check if the output file already exists
     if output != '':
         if exists(output):
@@ -41,32 +61,36 @@ def checkProxyList(proxyList, output, wait):
                     print('Not a valid choice, please try again\n')
 
         output_file = open(output, 'a')
-        output_mark = True
 
     start = time()
 
-    # go through the proxy list and check each element
+    # validate all proxies
     for proxy in proxyList:
-        print(f'Checking: {proxy}')
         if not validateProxy(proxy):
             print(f'"{proxy}" is not a valid proxy')
+            proxyList.remove(proxy)
             continue
 
+    threads = []
+
+    # create thread list
+    for proxy in proxyList:
         ip, port = proxy.split(':')
-        if checkProxy(ip, int(port), wait):
-            print('host is up')
-            if output_mark:     # write to output file
-                output_file.write(proxy + '\n')
-                output_file.flush()
-        else:
-            print('host is down')
-        print()
+        t = Thread(target=checkProxy, args=(ip, int(port), wait, output_file))
+        threads.append(t)
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 
     # close output file
-    if output_mark:
+    if output_file:
         output_file.close()
     end = time()
 
+    print(f'\nChecked {str(counter)} proxies')
     return str(end-start)
 
 
