@@ -1,0 +1,9 @@
+# ignore everything
+*
+
+# except these files
+!functions.py
+!.gitignore
+!LICENSE
+!ProxyChecker.py
+!README.md

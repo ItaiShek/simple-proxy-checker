@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
+
 # ProxyChecker: Check if proxy servers are up
 # (c) 2021 Itai Shek
+# Version 1.1.0
 
 import sys
 import getopt
@@ -7,11 +10,10 @@ from functions import *
 
 
 def main():
-    proxy = ''
     filename = ''
     output = ''
     proxyList = []
-    wait = 5
+    wait = 5    # The default is 5 seconds
 
     # check if there are less than two arguments
     if len(sys.argv) < 2:
@@ -21,42 +23,38 @@ def main():
     # get arguments from the command line
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   shortopts="hf:p:o:t:",
-                                   longopts=["help=", "file=", "proxy=", "output=", "time="]
+                                   shortopts="hf:o:t:",
+                                   longopts=["help=", "file=", "output=", "time="]
                                    )
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err)
         usage()
-        sys.exit(2)
+        sys.exit(1)
 
     # set the variables with the corresponding arguments
     for opt, arg in opts:
-        if opt in ('-h', '--help'):     # help screen
+        if opt in ('-h', '--help'):      # help screen
             usage()
             sys.exit()
-        elif opt in ('-p', '--proxy'):  # proxy server of the form IP:PORT
-            proxy = arg
-        elif opt in ('-f', '--file'):  # proxy list file
+        elif opt in ('-f', '--file'):    # proxy list file
             filename = arg
         elif opt in ('-o', '--output'):  # output file of good proxies
             output = arg
-        elif opt in ('-t', '--time'):  # output file of good proxies
+        elif opt in ('-t', '--time'):    # set waiting time
             wait = arg
             if wait.isdigit():
                 wait = int(wait)
             else:
                 print('Invalid time')
-                exit(1)
+                sys.exit(1)
         else:
             assert False, "unhandled option"
 
     # check if the proxy input is valid
-    if proxy == '' and filename == '':
+    if args is None and filename == '':
         print('No proxy was entered')
         sys.exit(1)
-    elif proxy != '' and filename != '':
-        print('Only one option is allowed at a time')
 
     # get proxies from file
     try:
@@ -67,27 +65,28 @@ def main():
             f.close()
     except FileNotFoundError as err:
         print(err)
-        exit(2)
+        sys.exit(1)
 
     # get proxy from terminal
-    if proxy != '':
-        proxyList.append(proxy)
+    if args is not None:
+        for proxy in args:
+            proxyList.append(proxy)
 
     # check the proxy list
     counter = checkProxyList(proxyList=proxyList, output=output, wait=wait)
 
     print(f'Finished in {counter} seconds')
+    sys.exit(0)
 
 
 def usage():
     # print usage message
-    print("Usage: ProxyChecker [-p IP:HOST] [-f proxy-list] [-o output-list] [-t connection's-max-time]")
+    print("Usage: ProxyChecker [OPTIONS] IP:PORT [IP:PORT IP:PORT...]")
     print("Options:")
     print('         -h, --help:         This screen')
-    print('         -p, --proxy:        proxy server and port to check, of the form IP:PORT')
-    print('         -f, --file:         Proxy file list to check, which is of the form IP:PORT for all proxy in the list')
-    print('         -o, --output:       Output file for all the working proxies')
-    print('         -t, --time:         Maximum time to wait for connection to the proxy')
+    print('         -f, --file:         Get proxies from file                               (e.g. -f proxy_list.txt)')
+    print('         -o, --output:       Output file for all the working proxies             (e.g. -o output.txt)')
+    print('         -t, --time:         Maximum waiting time for a connection to the proxy  (e.g. -t 10)')
 
 
 if __name__ == "__main__":

@@ -1,20 +1,25 @@
 # ProxyChecker: Check if proxy servers are up
 # (c) 2021 Itai Shek
+# Version 1.1.0
 
 import socket
+from sys import exit
 from os.path import exists
 from time import time
 from threading import Thread, Lock
+from re import sub
 
 print_lock = Lock()
-counter = 1
+counter = 0
+
 
 # return True if the host responds to ping, and False if not.
 def checkProxy(ip, port, wait, outfile):
     # create stream socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    sock.settimeout(wait)    # maximum time to connect - default time is 5 seconds
+    sock.settimeout(wait)    # maximum time to connect - the default time is 5 seconds
+
     connect = sock.connect_ex((ip, port))
 
     # close socket
@@ -30,7 +35,7 @@ def checkProxy(ip, port, wait, outfile):
         print('host is up')
         print_lock.release()
 
-        if outfile: # write to file
+        if outfile:  # write to file
             outfile.write(ip + ':' + str(port) + '\n')
             outfile.flush()
 
@@ -65,11 +70,16 @@ def checkProxyList(proxyList, output, wait):
     start = time()
 
     # validate all proxies
-    for proxy in proxyList:
+    for index, proxy in enumerate(proxyList):
         if not validateProxy(proxy):
             print(f'"{proxy}" is not a valid proxy')
             proxyList.remove(proxy)
-            continue
+        else:
+            # remove leading zeros in the IP address
+            proxyList[index] = removeLeadingZeros(proxy)
+
+    # remove duplicates
+    proxyList = set(proxyList)
 
     threads = []
 
@@ -113,3 +123,11 @@ def validateProxy(proxy):
         return True
     except socket.error:
         return False
+
+
+# remove leading zeros from proxy's ip address
+def removeLeadingZeros(proxy):
+    ip, port = proxy.split(':')
+    ip = sub(r'(^|\.)0+(?=[^.])', r'\1', ip)
+
+    return ip + ':' + port
