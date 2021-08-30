@@ -70,3 +70,7 @@ Example: ProxyChecker -f proxylist.txt -o working.txt
 * All proxies must be of the form IP:PORT, if it's not then the program skips to the next proxy on the list
 * It is not recommended to set the waiting time below 5 seconds
 * Only working proxies will be written to the output file
+
+## License
+
+[GNU GPL 3.0](https://github.com/ItaiShek/simple-proxy-checker/blob/main/LICENSE)
